@@ -1,251 +1,265 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEON RUNNER 3D</title>
+<title>NEON RUNNER — 5-Level Platform Adventure</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#070817;color:white;font-family:Arial,sans-serif;text-align:center}
-header{padding:14px 8px}
-h1{margin:4px;color:#48f7ff;letter-spacing:3px;text-shadow:0 0 16px #00d9ff}
-header p{color:#b7c7e8;margin:8px}
-#stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px}
-.stat{background:#151831;border:1px solid #363d67;border-radius:10px;padding:10px 13px;font-weight:bold}
-#gamebox{position:relative;width:min(96vw,850px);margin:8px auto;border:2px solid #36e9ff;border-radius:14px;overflow:hidden;box-shadow:0 0 25px #064f86}
-canvas{display:block;width:100%;height:auto;background:#080b22}
-#overlay{position:absolute;inset:0;background:#06091bdc;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
-#overlay h2{font-size:clamp(25px,5vw,45px);color:#51f5ff;margin:8px}
-#overlay p{line-height:1.6;max-width:480px}
-button{border:0;border-radius:10px;background:#42efff;color:#071021;font-weight:bold;font-size:15px;padding:12px 17px;margin:5px;cursor:pointer}
-button:hover{filter:brightness(1.2);transform:scale(1.03)}
-#controls{display:flex;justify-content:center;gap:12px;margin:12px}
-#controls button{min-width:80px;font-size:20px}
-.hint{color:#aab8d9;font-size:13px;padding:8px 12px 20px}
+  :root { --cyan:#36f6ff; --pink:#ff3df2; --lime:#b8ff3b; --bg:#070816; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(ellipse at top,#151538 0%,#070816 60%); color:#f4f7ff; font-family:Segoe UI,Arial,sans-serif; display:flex; flex-direction:column; align-items:center; padding:18px; }
+  .shell { width:min(100%,1000px); }
+  header { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+  h1 { margin:0; font-size:clamp(1.45rem,4vw,2.5rem); letter-spacing:.12em; text-shadow:0 0 14px var(--cyan); }
+  h1 span { color:var(--pink); }
+  .subtitle { color:#a9b1d4; font-size:.9rem; margin-top:5px; }
+  .hud { display:flex; flex-wrap:wrap; gap:8px; }
+  .pill { background:#11142a; border:1px solid #30365e; border-radius:10px; padding:9px 12px; min-width:94px; box-shadow:0 0 12px #141c45; }
+  .pill small { display:block; color:#9da8d0; font-size:.68rem; letter-spacing:.12em; }
+  .pill b { display:block; font-size:1.1rem; margin-top:3px; color:var(--cyan); }
+  .gamebox { position:relative; border:1px solid #454c8c; border-radius:15px; overflow:hidden; box-shadow:0 0 26px #202b75, inset 0 0 30px #101638; background:#080b20; }
+  canvas { display:block; width:100%; height:auto; aspect-ratio:16/9; outline:none; touch-action:none; }
+  .overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; background:#050714d9; padding:20px; }
+  .overlay.hidden { display:none; }
+  .panel { max-width:500px; border:1px solid #3b497e; border-radius:16px; background:#0c1027ed; padding:26px; box-shadow:0 0 30px #2630a6; }
+  .panel h2 { margin:0 0 10px; color:var(--cyan); font-size:clamp(1.4rem,4vw,2.1rem); text-shadow:0 0 12px #00d9ff; }
+  .panel p { color:#c1c8e7; line-height:1.55; }
+  button { border:1px solid var(--cyan); border-radius:10px; background:#102c43; color:white; font-weight:700; padding:11px 17px; cursor:pointer; box-shadow:0 0 13px #0babc4; transition:transform .12s,background .12s; }
+  button:hover { background:#164c61; transform:translateY(-1px); }
+  .pink { border-color:var(--pink); background:#3c1744; box-shadow:0 0 13px #9d21a9; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .below { display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:12px; color:#aeb7db; font-size:.9rem; }
+  kbd { display:inline-block; border:1px solid #555d85; background:#141a34; border-radius:5px; padding:2px 6px; color:#f4f7ff; font:inherit; font-size:.82rem; }
+  .mobile { display:none; gap:10px; margin-top:14px; justify-content:space-between; }
+  .mobile button { flex:1; padding:15px 8px; font-size:1.2rem; touch-action:none; user-select:none; }
+  @media (pointer:coarse) { .mobile { display:flex; } }
+  @media(max-width:600px) { body{padding:10px}.pill{min-width:76px;padding:7px 9px}.below{font-size:.82rem} }
 </style>
 </head>
 <body>
-<header>
-<h1>⚡ NEON RUNNER 3D</h1>
-<p>Run fast. Dodge danger. Collect crystals. Reach the portal!</p>
-</header>
-
-<div id="stats">
-<div class="stat">❤️ <span id="hp">5</span></div>
-<div class="stat">🛡️ <span id="shield">2</span></div>
-<div class="stat">💎 <span id="gems">0</span></div>
-<div class="stat">⭐ <span id="score">0</span></div>
-<div class="stat">LEVEL <span id="level">1</span>/5</div>
+<div class="shell">
+  <header>
+    <div>
+      <h1>NEON <span>RUNNER</span></h1>
+      <div class="subtitle">A HARD-MODE CYBER PLATFORM ADVENTURE</div>
+    </div>
+    <div class="hud">
+      <div class="pill"><small>SCORE</small><b id="score">0000</b></div>
+      <div class="pill"><small>SHARDS</small><b id="shards">0 / 12</b></div>
+      <div class="pill"><small>HEARTS</small><b id="hearts">♥ ♥ ♥</b></div>
+      <div class="pill"><small>LEVEL</small><b id="level">01</b></div>
+    </div>
+  </header>
+  <div class="gamebox">
+    <canvas id="game" width="960" height="540" tabindex="0" aria-label="Neon Runner platform game"></canvas>
+    <div id="overlay" class="overlay">
+      <div class="panel">
+        <h2 id="overlayTitle">READY, RUNNER?</h2>
+        <p id="overlayText">Beat all 5 levels, leap across neon platforms, collect energy shards, and reach the final portal. Each section gets harder, with faster drones and trickier jumps.</p>
+        <div class="actions" style="justify-content:center">
+          <button id="startBtn">▶ START ADVENTURE</button>
+          <button id="restartBtn" class="pink">↻ RESTART</button>
+        </div>
+        <p style="font-size:.8rem;margin-bottom:0">5 levels • Hard mode • Checkpoints • Moving hazards • Three lives</p>
+      </div>
+    </div>
+  </div>
+  <div class="mobile">
+    <button id="leftBtn" aria-label="Move left">◀</button>
+    <button id="jumpBtn" aria-label="Jump">⬆ JUMP</button>
+    <button id="rightBtn" aria-label="Move right">▶</button>
+  </div>
+  <div class="below">
+    <div><strong>CONTROLS</strong> &nbsp; <kbd>A</kbd>/<kbd>←</kbd> left &nbsp; <kbd>D</kbd>/<kbd>→</kbd> right &nbsp; <kbd>W</kbd>/<kbd>↑</kbd>/<kbd>Space</kbd> jump</div>
+    <div class="actions"><span>Collect shards • Avoid drones • Reach the portal</span><button id="smallRestart" class="pink">↻ Restart</button></div>
+  </div>
 </div>
-
-<div id="gamebox">
-<canvas id="game" width="850" height="520"></canvas>
-<div id="overlay">
-<h2>NEON RUNNER 3D</h2>
-<p>Survive five increasingly difficult levels! Collect crystals, dodge red obstacles and reach each portal.</p>
-<p><b>← →</b> Move &nbsp; <b>SPACE / ↑</b> Jump<br>On mobile, use the buttons below.</p>
-<button id="start">▶ START GAME</button>
-</div>
-</div>
-
-<div id="controls">
-<button id="left" aria-label="Move left">⬅️</button>
-<button id="jump" aria-label="Jump">⬆️ JUMP</button>
-<button id="right" aria-label="Move right">➡️</button>
-</div>
-<div class="hint">Keyboard: A / D or ← / → to move · SPACE / ↑ to jump · P to pause · R to restart</div>
-
 <script>
 (() => {
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-const $=id=>document.getElementById(id);
-const W=canvas.width,H=canvas.height;
-let running=false,ended=false,paused=false;
-let level=1,health=5,shields=2,gems=0,score=0,distance=0;
-let lane=1,playerX=1,jumpY=0,jumpV=0,invincible=0;
-let objects=[],spawnTimer=0,lastTime=0,speed=0.32;
-let best=Number(localStorage.getItem("neonRunnerBest")||0);
-
-function reset(){
-level=1;health=5;shields=2;gems=0;score=0;distance=0;
-lane=1;playerX=1;jumpY=0;jumpV=0;invincible=0;
-objects=[];spawnTimer=0;speed=.32;
-running=true;ended=false;paused=false;
-$("overlay").style.display="none";
-updateStats();
-lastTime=performance.now();
-requestAnimationFrame(loop);
-}
-function updateStats(){
-$("hp").textContent=health;
-$("shield").textContent=shields;
-$("gems").textContent=gems;
-$("score").textContent=score;
-$("level").textContent=level;
-}
-function move(n){if(running&&!paused)lane=Math.max(0,Math.min(2,lane+n))}
-function jump(){if(running&&!paused&&jumpY===0){jumpV=570}}
-document.addEventListener("keydown",e=>{
-if(["ArrowLeft","ArrowRight","ArrowUp"," "].includes(e.key))e.preventDefault();
-if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")move(-1);
-if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")move(1);
-if(e.key==="ArrowUp"||e.key===" ")jump();
-if(e.key.toLowerCase()==="r")reset();
-if(e.key.toLowerCase()==="p"&&running)paused=!paused;
-});
-$("left").addEventListener("pointerdown",()=>move(-1));
-$("right").addEventListener("pointerdown",()=>move(1));
-$("jump").addEventListener("pointerdown",jump);
-$("start").addEventListener("click",reset);
-
-function polygon(points,color,stroke){
-ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);
-for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);
-ctx.closePath();ctx.fillStyle=color;ctx.fill();
-if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}
-}
-function roadEdges(t){
-return {y:100+t*420,x1:W/2-45-t*330,x2:W/2+45+t*330};
-}
-function laneX(n,t){
-const e=roadEdges(t);
-return e.x1+(e.x2-e.x1)*(n+.5)/3;
-}
-function drawBackground(){
-let grad=ctx.createLinearGradient(0,0,0,H);
-grad.addColorStop(0,"#080b24");grad.addColorStop(1,"#171039");
-ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
-for(let i=0;i<45;i++){
-let x=(i*173+31)%W,y=(i*67+12)%230;
-ctx.fillStyle=i%3===0?"#6dfbff":"#8a7dff";
-ctx.globalAlpha=.3+(i%4)*.12;
-ctx.fillRect(x,y,2,2);
-}
-ctx.globalAlpha=1;
-ctx.strokeStyle="#382765";ctx.lineWidth=1;
-for(let i=0;i<13;i++){
-let y=210+i*i*2.1;
-ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
-}
-polygon([[W/2-45,100],[W/2+45,100],[W+150,H],[-150,H]],"#11162d","#27eaff");
-for(let i=1;i<3;i++){
-let x=W/2-45+(90/3)*i;
-ctx.strokeStyle="#5d4caa";ctx.lineWidth=2;
-ctx.beginPath();ctx.moveTo(x,100);ctx.lineTo(W/2+(x-W/2)*8,H);ctx.stroke();
-}
-for(let i=0;i<12;i++){
-let t=((i/12+distance*.014)%1);
-let e=roadEdges(t);
-ctx.strokeStyle="#27dfff";ctx.globalAlpha=.2+t*.8;
-ctx.lineWidth=1+t*3;
-ctx.beginPath();ctx.moveTo(e.x1,e.y);ctx.lineTo(e.x2,e.y);ctx.stroke();
-}
-ctx.globalAlpha=1;
-}
-function drawPlayer(){
-const x=laneX(playerX,.88),base=H-82-jumpY;
-if(invincible>0&&Math.floor(invincible*12)%2===0)return;
-ctx.shadowBlur=22;ctx.shadowColor="#30f7ff";
-ctx.fillStyle="#3cf4ff";
-ctx.fillRect(x-17,base-46,34,43);
-ctx.fillStyle="#151a44";ctx.fillRect(x-10,base-38,20,11);
-ctx.fillStyle="#fff";ctx.fillRect(x-8,base-36,5,4);ctx.fillRect(x+3,base-36,5,4);
-ctx.fillStyle="#b46bff";ctx.fillRect(x-15,base-3,11,14);
-ctx.fillRect(x+4,base-3,11,14);
-ctx.shadowBlur=0;
-ctx.fillStyle="#6bfcff";ctx.globalAlpha=.3;
-ctx.beginPath();ctx.ellipse(x,base+12,28,6,0,0,Math.PI*2);ctx.fill();
-ctx.globalAlpha=1;
-}
-function drawObjects(){
-for(const o of objects){
-const t=o.z,x=laneX(o.lane,t),y=roadEdges(t).y;
-const size=7+t*35;
-ctx.save();ctx.translate(x,y);
-if(o.type==="gem"){
-ctx.shadowBlur=18;ctx.shadowColor="#ffe35b";
-ctx.fillStyle="#ffe35b";ctx.beginPath();
-ctx.moveTo(0,-size);ctx.lineTo(size*.7,0);ctx.lineTo(0,size);ctx.lineTo(-size*.7,0);ctx.closePath();ctx.fill();
-ctx.fillStyle="white";ctx.fillRect(-2,-size*.4,4,size*.4);
-}else if(o.type==="block"){
-ctx.shadowBlur=16;ctx.shadowColor="#ff355f";
-polygon([[-size,y*0],[size,-size*.2],[size,size],[ -size,size*1.1]],"#ff315b","#ffb1c5");
-ctx.fillStyle="#5c143e";ctx.fillRect(-size*.6,-size*.05,size*1.2,size*.2);
-}else{
-ctx.shadowBlur=20;ctx.shadowColor="#9d6cff";
-ctx.strokeStyle="#bd85ff";ctx.lineWidth=4+t*5;
-ctx.strokeRect(-size*.8,-size*1.2,size*1.6,size*1.4);
-ctx.fillStyle="#e9d7ff";ctx.fillRect(-size*.5,-size*.8,size,size*.15);
-}
-ctx.restore();
-}
-ctx.shadowBlur=0;
-}
-function spawn(){
-const r=Math.random();
-objects.push({lane:Math.floor(Math.random()*3),z:0,type:r<.48?"block":r<.83?"gem":"gate",hit:false});
-}
-function damage(){
-if(invincible>0)return;
-if(shields>0){shields--;invincible=1.4}
-else{health--;invincible=1.4}
-updateStats();
-if(health<=0)finish(false);
-}
-function finish(won){
-running=false;ended=true;
-if(score>best){best=score;localStorage.setItem("neonRunnerBest",best)}
-$("overlay").style.display="flex";
-$("overlay").innerHTML=`
-<h2>${won?"🏆 YOU WIN!":"💥 GAME OVER"}</h2>
-<p>${won?"You conquered all five neon levels!":"Your run has ended. Try again and beat your best score."}</p>
-<p>⭐ Score: <b>${score}</b><br>💎 Crystals: <b>${gems}</b><br>🏅 Best score: <b>${best}</b></p>
-<button id="again">↻ PLAY AGAIN</button>`;
-$("again").addEventListener("click",reset);
-}
-function loop(now){
-if(!running)return;
-requestAnimationFrame(loop);
-if(paused){
-drawBackground();drawObjects();drawPlayer();
-ctx.fillStyle="white";ctx.font="bold 36px Arial";ctx.textAlign="center";ctx.fillText("PAUSED",W/2,H/2);
-return;
-}
-const dt=Math.min((now-lastTime)/1000,.04);lastTime=now;
-distance+=dt*speed*10;
-speed=.32+(level-1)*.09;
-if(invincible>0)invincible-=dt;
-if(jumpY>0||jumpV>0){
-jumpY+=jumpV*dt;jumpV-=1450*dt;
-if(jumpY<=0){jumpY=0;jumpV=0}
-}
-playerX+=(lane-playerX)*Math.min(1,dt*12);
-spawnTimer-=dt;
-if(spawnTimer<=0){spawn();spawnTimer=Math.max(.38,1.15-level*.13)+Math.random()*.45}
-for(const o of objects){
-o.z+=dt*speed*(1+level*.15);
-if(!o.hit&&o.z>.82&&o.z<.98&&Math.abs(playerX-o.lane)<.42){
-o.hit=true;
-if(o.type==="gem"){gems++;score+=100}
-else if(o.type==="block"){if(jumpY<48)damage();else score+=15}
-else{score+=50}
-updateStats();
-}
-}
-objects=objects.filter(o=>o.z<1.08);
-score+=Math.floor(dt*10);
-const newLevel=Math.min(5,Math.floor(distance/30)+1);
-if(newLevel!==level){level=newLevel;updateStats()}
-drawBackground();drawObjects();drawPlayer();
-ctx.fillStyle="#b7eaff";ctx.font="14px Arial";ctx.textAlign="left";
-ctx.fillText("DISTANCE "+Math.floor(distance)+" m",18,28);
-ctx.textAlign="right";ctx.fillText("BEST "+best,W-18,28);
-if(distance>=150){finish(true)}
-}
-drawBackground();
-drawPlayer();
+  const canvas = document.getElementById('game'), ctx = canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const $ = id => document.getElementById(id);
+  const ui={score:$('score'),shards:$('shards'),hearts:$('hearts'),level:$('level')};
+  const overlay=$('overlay'), overlayTitle=$('overlayTitle'), overlayText=$('overlayText');
+  const keys={left:false,right:false,jump:false};
+  let state='title', last=0, camera=0, score=0, lives=3, collected=new Set(), particles=[], checkpoint=0, time=0, level=1, lastLevel=1;
+  const worldWidth=3300;
+  const platforms=[
+    {x:0,y:470,w:330,h:70},{x:390,y:420,w:150,h:22},{x:590,y:365,w:125,h:22},
+    {x:775,y:410,w:145,h:22},{x:985,y:350,w:130,h:22},{x:1170,y:300,w:130,h:22},
+    {x:1370,y:380,w:160,h:22},{x:1595,y:325,w:125,h:22},{x:1785,y:270,w:145,h:22},
+    {x:1990,y:355,w:145,h:22},{x:2200,y:405,w:150,h:22},{x:2410,y:335,w:130,h:22},
+    {x:2600,y:285,w:145,h:22},{x:2810,y:360,w:150,h:22},{x:3020,y:430,w:280,h:110}
+  ];
+  const shards=[
+    [440,380],[635,325],[820,370],[1025,310],[1210,260],[1415,340],
+    [1635,285],[1830,230],[2040,315],[2250,365],[2450,295],[2660,245]
+  ].map((p,i)=>({x:p[0],y:p[1],r:10,id:i}));
+  const drones=[
+    {x:690,y:326,base:326,range:38,speed:1.8,phase:0},
+    {x:1080,y:310,base:310,range:30,speed:2.4,phase:1},
+    {x:1690,y:285,base:285,range:42,speed:2.1,phase:2},
+    {x:2310,y:365,base:365,range:36,speed:2.6,phase:3},
+    {x:2740,y:245,base:245,range:40,speed:2.2,phase:4}
+  ];
+  const player={x:55,y:400,w:26,h:38,vx:0,vy:0,ground:false,invuln:0};
+  const portal={x:3180,y:365,w:42,h:65};
+  const gravity=.62, moveSpeed=4.1, jumpPower=-12.8;
+  function reset(){
+    state='playing';camera=0;score=0;lives=3;collected=new Set();particles=[];checkpoint=0;time=0;level=1;lastLevel=1;
+    player.x=55;player.y=400;player.vx=player.vy=0;player.invuln=0;
+    overlay.classList.add('hidden');updateUI();
+  }
+  function updateUI(){
+    ui.score.textContent=String(score).padStart(4,'0');
+    ui.shards.textContent=`${collected.size} / ${shards.length}`;
+    ui.hearts.textContent='♥ '.repeat(lives).trim()||'—';
+    ui.level.textContent=String(level).padStart(2,'0')+' / 05';
+  }
+  function showOverlay(title,text,buttonText='▶ PLAY AGAIN'){
+    state=title==='YOU WIN!'?'won':'over';overlayTitle.textContent=title;overlayText.textContent=text;
+    $('startBtn').textContent=buttonText;overlay.classList.remove('hidden');
+  }
+  function burst(x,y,color,n=12){
+    for(let i=0;i<n;i++) particles.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:25+Math.random()*20,color});
+  }
+  function rects(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+  function hurt(){
+    if(player.invuln>0)return;
+    lives--;burst(player.x+player.w/2,player.y+player.h/2,'#ff3df2',18);
+    player.invuln=100;
+    if(lives<=0){updateUI();showOverlay('GAME OVER','The neon city got you this time. Restart and try a different jump route.');return}
+    player.x=Math.max(40,checkpoint-25);player.y=350;player.vx=0;player.vy=0;updateUI();
+  }
+  function update(dt){
+    if(state!=='playing')return;
+    time+=dt;
+    const frame=dt/16.667;
+    level=Math.min(5,Math.floor(player.x/(worldWidth/5))+1);
+    if(level!==lastLevel){lastLevel=level;score+=level*50;updateUI();burst(player.x+player.w/2,player.y,'#ff3df2',20);}
+    // Hazards accelerate as the runner advances through the five stages.
+    for(const d of drones)d.speed=1.5+level*.42+d.phase*.12;
+    player.vx=(keys.right?moveSpeed:0)-(keys.left?moveSpeed:0);
+    if(keys.jump&&player.ground){player.vy=jumpPower;player.ground=false;burst(player.x+13,player.y+38,'#36f6ff',5)}
+    keys.jump=false;
+    player.vy+=gravity*frame; if(player.vy>14)player.vy=14;
+    player.x+=player.vx*frame;
+    player.x=Math.max(0,Math.min(worldWidth-player.w,player.x));
+    const oldY=player.y;player.y+=player.vy*frame;player.ground=false;
+    for(const p of platforms){
+      if(player.x+player.w>p.x&&player.x<p.x+p.w&&oldY+player.h<=p.y+3&&player.y+player.h>=p.y&&player.vy>=0){
+        player.y=p.y-player.h;player.vy=0;player.ground=true;
+      }
+    }
+    if(player.y>H+100)hurt();
+    if(player.invuln>0)player.invuln-=frame;
+    for(const d of drones){
+      d.x+=Math.sin(time*.001*d.speed+d.phase)*.7*frame;
+      d.y=d.base+Math.sin(time*.003*d.speed+d.phase)*d.range;
+      if(rects(player,{x:d.x-15,y:d.y-14,w:30,h:28}))hurt();
+    }
+    for(const s of shards){
+      if(!collected.has(s.id)&&rects(player,{x:s.x-s.r,y:s.y-s.r,w:s.r*2,h:s.r*2})){
+        collected.add(s.id);score+=100;burst(s.x,s.y,'#b8ff3b',14);updateUI();
+      }
+    }
+    // Safe ledges act as checkpoints.
+    if(player.x>660&&checkpoint<660)checkpoint=660;
+    if(player.x>1320&&checkpoint<1320)checkpoint=1320;
+    if(player.x>1980&&checkpoint<1980)checkpoint=1980;
+    if(player.x>2640&&checkpoint<2640)checkpoint=2640;
+    if(rects(player,portal)){
+      if(collected.size===shards.length){score+=500;updateUI();showOverlay('YOU WIN!','You conquered all 5 levels and recovered every energy shard! Final score: '+score+'. Ready for another run?','↻ PLAY AGAIN')}
+      else { /* portal glows until every shard is collected */ }
+    }
+    camera=Math.max(0,Math.min(worldWidth-W,player.x-W*.35));
+    particles=particles.filter(p=>p.life>0);
+    for(const p of particles){p.x+=p.vx*frame;p.y+=p.vy*frame;p.life-=frame}
+  }
+  function glow(color,blur){ctx.shadowColor=color;ctx.shadowBlur=blur}
+  function line(x1,y1,x2,y2,color,width=1){
+    ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#090b22');bg.addColorStop(1,'#11102a');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    // Starfield and distant cyber skyline
+    for(let i=0;i<75;i++){
+      let x=((i*137-camera*.18)%W+W)%W,y=(i*71)%330;
+      ctx.fillStyle=i%3===0?'#ff3df2':'#5e7bcb';ctx.globalAlpha=.25+(i%4)*.13;ctx.fillRect(x,y,2,2);
+    }ctx.globalAlpha=1;
+    for(let i=0;i<24;i++){
+      const x=((i*90-camera*.32)% (W+90)+W+90)%(W+90)-20;
+      const bh=70+(i*47%125);ctx.fillStyle='#101532';ctx.fillRect(x,470-bh,56,bh);
+      for(let wy=480-bh;wy<458;wy+=17)for(let wx=x+8;wx<x+49;wx+=14){ctx.fillStyle=(Math.floor(wx+wy+i)%3===0)?'#ff3df244':'#36f6ff33';ctx.fillRect(wx,wy,5,7)}
+    }
+    // Ground danger void
+    ctx.fillStyle='#080916';ctx.fillRect(0,470,W,70);
+    for(const p of platforms){
+      const x=p.x-camera;if(x+p.w<0||x>W)continue;
+      ctx.fillStyle='#111932';ctx.fillRect(x,p.y,p.w,p.h);
+      glow('#36f6ff',13);line(x,p.y,x+p.w,p.y,'#36f6ff',3);ctx.shadowBlur=0;
+      line(x,p.y+p.h,x+p.w,p.y+p.h,'#303a77',1);
+      for(let gx=x+12;gx<x+p.w-6;gx+=28)line(gx,p.y+8,gx+8,p.y+8,'#263d63',2);
+    }
+    // Collectibles
+    for(const s of shards)if(!collected.has(s.id)){
+      const x=s.x-camera;ctx.save();ctx.translate(x,s.y);ctx.rotate(time*.002+s.id);
+      glow('#b8ff3b',18);ctx.fillStyle='#b8ff3b';ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(8,0);ctx.lineTo(0,11);ctx.lineTo(-8,0);ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.restore();
+    }
+    // Drones
+    for(const d of drones){
+      const x=d.x-camera;glow('#ff3df2',15);ctx.fillStyle='#30133f';ctx.strokeStyle='#ff3df2';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x-16,d.y);ctx.lineTo(x-7,d.y-12);ctx.lineTo(x+8,d.y-12);ctx.lineTo(x+16,d.y);ctx.lineTo(x+8,d.y+10);ctx.lineTo(x-8,d.y+10);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#fff';ctx.fillRect(x-5,d.y-3,10,4);ctx.shadowBlur=0;
+    }
+    // Portal
+    const px=portal.x-camera;glow(collected.size===shards.length?'#b8ff3b':'#ff3df2',22);
+    ctx.strokeStyle=collected.size===shards.length?'#b8ff3b':'#ff3df2';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(px+21,portal.y+32,19,31,0,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='#36f6ff';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(px+21,portal.y+32,11,24,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;
+    // Player flickers after damage
+    if(player.invuln<=0||Math.floor(time/75)%2===0){
+      const x=player.x-camera;
+      glow('#36f6ff',17);ctx.fillStyle='#132e49';ctx.strokeStyle='#36f6ff';ctx.lineWidth=2;
+      ctx.fillRect(x,player.y,player.w,player.h);ctx.strokeRect(x,player.y,player.w,player.h);
+      ctx.fillStyle='#ff3df2';ctx.fillRect(x+5,player.y+8,16,5);
+      ctx.fillStyle='#b8ff3b';ctx.fillRect(x+7,player.y+25,5,7);ctx.fillRect(x+16,player.y+25,4,7);ctx.shadowBlur=0;
+    }
+    // Particles
+    for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/35);glow(p.color,8);ctx.fillStyle=p.color;ctx.fillRect(p.x-camera,p.y,4,4)}
+    ctx.globalAlpha=1;ctx.shadowBlur=0;
+    // Tiny direction hints
+    ctx.fillStyle='#9ca9d5';ctx.font='12px Segoe UI';ctx.fillText('LEVEL '+String(level).padStart(2,'0')+' / 05',18,25);
+    ctx.fillStyle='#ff3df2';ctx.fillRect(18,32,Math.max(0,(W-36)*player.x/worldWidth),3);
+    ctx.fillStyle='#9ca9d5';ctx.fillText('ENERGY SHARDS',18,52);
+    ctx.fillStyle='#b8ff3b';ctx.fillText('◆'.repeat(Math.max(0,collected.size)),18,70);
+    if(player.x>portal.x-300&&collected.size<shards.length){
+      ctx.fillStyle='#ffb4f8';ctx.font='bold 14px Segoe UI';ctx.fillText(`FINAL PORTAL LOCKED — ${shards.length-collected.size} SHARD(S) LEFT`,W-290,28);
+    }
+  }
+  function loop(ts){const dt=Math.min(40,ts-(last||ts));last=ts;update(dt);draw();requestAnimationFrame(loop)}
+  function setKey(e,on){
+    const k=e.key.toLowerCase();
+    if(['arrowleft','arrowright','arrowup',' ','a','d','w'].includes(k))e.preventDefault();
+    if(k==='arrowleft'||k==='a')keys.left=on;
+    if(k==='arrowright'||k==='d')keys.right=on;
+    if(k==='arrowup'||k==='w'||k===' ')if(on)keys.jump=true;
+  }
+  window.addEventListener('keydown',e=>{setKey(e,true);if((e.key==='Enter'||e.key===' ')&&state!=='playing'){if(state==='title'||state==='over'||state==='won')reset()}});
+  window.addEventListener('keyup',e=>setKey(e,false));
+  window.addEventListener('blur',()=>{keys.left=keys.right=keys.jump=false});
+  $('startBtn').addEventListener('click',()=>reset());
+  $('restartBtn').addEventListener('click',()=>reset());
+  $('smallRestart').addEventListener('click',()=>reset());
+  function bindHold(id,key){
+    const el=$(id);
+    const down=e=>{e.preventDefault();if(state!=='playing')reset();if(key==='jump')keys.jump=true;else keys[key]=true;};
+    const up=e=>{e.preventDefault();if(key!=='jump')keys[key]=false;};
+    el.addEventListener('pointerdown',down);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up);
+  }
+  bindHold('leftBtn','left');bindHold('rightBtn','right');bindHold('jumpBtn','jump');
+  updateUI();requestAnimationFrame(loop);
 })();
 </script>
 </body>
