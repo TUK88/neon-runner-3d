@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON RUNNER 3D</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#070817;color:white;font-family:Arial,sans-serif;text-align:center}
+header{padding:14px 8px}
+h1{margin:4px;color:#48f7ff;letter-spacing:3px;text-shadow:0 0 16px #00d9ff}
+header p{color:#b7c7e8;margin:8px}
+#stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px}
+.stat{background:#151831;border:1px solid #363d67;border-radius:10px;padding:10px 13px;font-weight:bold}
+#gamebox{position:relative;width:min(96vw,850px);margin:8px auto;border:2px solid #36e9ff;border-radius:14px;overflow:hidden;box-shadow:0 0 25px #064f86}
+canvas{display:block;width:100%;height:auto;background:#080b22}
+#overlay{position:absolute;inset:0;background:#06091bdc;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+#overlay h2{font-size:clamp(25px,5vw,45px);color:#51f5ff;margin:8px}
+#overlay p{line-height:1.6;max-width:480px}
+button{border:0;border-radius:10px;background:#42efff;color:#071021;font-weight:bold;font-size:15px;padding:12px 17px;margin:5px;cursor:pointer}
+button:hover{filter:brightness(1.2);transform:scale(1.03)}
+#controls{display:flex;justify-content:center;gap:12px;margin:12px}
+#controls button{min-width:80px;font-size:20px}
+.hint{color:#aab8d9;font-size:13px;padding:8px 12px 20px}
+</style>
+</head>
+<body>
+<header>
+<h1>⚡ NEON RUNNER 3D</h1>
+<p>Run fast. Dodge danger. Collect crystals. Reach the portal!</p>
+</header>
+
+<div id="stats">
+<div class="stat">❤️ <span id="hp">5</span></div>
+<div class="stat">🛡️ <span id="shield">2</span></div>
+<div class="stat">💎 <span id="gems">0</span></div>
+<div class="stat">⭐ <span id="score">0</span></div>
+<div class="stat">LEVEL <span id="level">1</span>/5</div>
+</div>
+
+<div id="gamebox">
+<canvas id="game" width="850" height="520"></canvas>
+<div id="overlay">
+<h2>NEON RUNNER 3D</h2>
+<p>Survive five increasingly difficult levels! Collect crystals, dodge red obstacles and reach each portal.</p>
+<p><b>← →</b> Move &nbsp; <b>SPACE / ↑</b> Jump<br>On mobile, use the buttons below.</p>
+<button id="start">▶ START GAME</button>
+</div>
+</div>
+
+<div id="controls">
+<button id="left" aria-label="Move left">⬅️</button>
+<button id="jump" aria-label="Jump">⬆️ JUMP</button>
+<button id="right" aria-label="Move right">➡️</button>
+</div>
+<div class="hint">Keyboard: A / D or ← / → to move · SPACE / ↑ to jump · P to pause · R to restart</div>
+
+<script>
+(() => {
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+const W=canvas.width,H=canvas.height;
+let running=false,ended=false,paused=false;
+let level=1,health=5,shields=2,gems=0,score=0,distance=0;
+let lane=1,playerX=1,jumpY=0,jumpV=0,invincible=0;
+let objects=[],spawnTimer=0,lastTime=0,speed=0.32;
+let best=Number(localStorage.getItem("neonRunnerBest")||0);
+
+function reset(){
+level=1;health=5;shields=2;gems=0;score=0;distance=0;
+lane=1;playerX=1;jumpY=0;jumpV=0;invincible=0;
+objects=[];spawnTimer=0;speed=.32;
+running=true;ended=false;paused=false;
+$("overlay").style.display="none";
+updateStats();
+lastTime=performance.now();
+requestAnimationFrame(loop);
+}
+function updateStats(){
+$("hp").textContent=health;
+$("shield").textContent=shields;
+$("gems").textContent=gems;
+$("score").textContent=score;
+$("level").textContent=level;
+}
+function move(n){if(running&&!paused)lane=Math.max(0,Math.min(2,lane+n))}
+function jump(){if(running&&!paused&&jumpY===0){jumpV=570}}
+document.addEventListener("keydown",e=>{
+if(["ArrowLeft","ArrowRight","ArrowUp"," "].includes(e.key))e.preventDefault();
+if(e.key==="ArrowLeft"||e.key.toLowerCase()==="a")move(-1);
+if(e.key==="ArrowRight"||e.key.toLowerCase()==="d")move(1);
+if(e.key==="ArrowUp"||e.key===" ")jump();
+if(e.key.toLowerCase()==="r")reset();
+if(e.key.toLowerCase()==="p"&&running)paused=!paused;
+});
+$("left").addEventListener("pointerdown",()=>move(-1));
+$("right").addEventListener("pointerdown",()=>move(1));
+$("jump").addEventListener("pointerdown",jump);
+$("start").addEventListener("click",reset);
+
+function polygon(points,color,stroke){
+ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);
+for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);
+ctx.closePath();ctx.fillStyle=color;ctx.fill();
+if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}
+}
+function roadEdges(t){
+return {y:100+t*420,x1:W/2-45-t*330,x2:W/2+45+t*330};
+}
+function laneX(n,t){
+const e=roadEdges(t);
+return e.x1+(e.x2-e.x1)*(n+.5)/3;
+}
+function drawBackground(){
+let grad=ctx.createLinearGradient(0,0,0,H);
+grad.addColorStop(0,"#080b24");grad.addColorStop(1,"#171039");
+ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+for(let i=0;i<45;i++){
+let x=(i*173+31)%W,y=(i*67+12)%230;
+ctx.fillStyle=i%3===0?"#6dfbff":"#8a7dff";
+ctx.globalAlpha=.3+(i%4)*.12;
+ctx.fillRect(x,y,2,2);
+}
+ctx.globalAlpha=1;
+ctx.strokeStyle="#382765";ctx.lineWidth=1;
+for(let i=0;i<13;i++){
+let y=210+i*i*2.1;
+ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+}
+polygon([[W/2-45,100],[W/2+45,100],[W+150,H],[-150,H]],"#11162d","#27eaff");
+for(let i=1;i<3;i++){
+let x=W/2-45+(90/3)*i;
+ctx.strokeStyle="#5d4caa";ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(x,100);ctx.lineTo(W/2+(x-W/2)*8,H);ctx.stroke();
+}
+for(let i=0;i<12;i++){
+let t=((i/12+distance*.014)%1);
+let e=roadEdges(t);
+ctx.strokeStyle="#27dfff";ctx.globalAlpha=.2+t*.8;
+ctx.lineWidth=1+t*3;
+ctx.beginPath();ctx.moveTo(e.x1,e.y);ctx.lineTo(e.x2,e.y);ctx.stroke();
+}
+ctx.globalAlpha=1;
+}
+function drawPlayer(){
+const x=laneX(playerX,.88),base=H-82-jumpY;
+if(invincible>0&&Math.floor(invincible*12)%2===0)return;
+ctx.shadowBlur=22;ctx.shadowColor="#30f7ff";
+ctx.fillStyle="#3cf4ff";
+ctx.fillRect(x-17,base-46,34,43);
+ctx.fillStyle="#151a44";ctx.fillRect(x-10,base-38,20,11);
+ctx.fillStyle="#fff";ctx.fillRect(x-8,base-36,5,4);ctx.fillRect(x+3,base-36,5,4);
+ctx.fillStyle="#b46bff";ctx.fillRect(x-15,base-3,11,14);
+ctx.fillRect(x+4,base-3,11,14);
+ctx.shadowBlur=0;
+ctx.fillStyle="#6bfcff";ctx.globalAlpha=.3;
+ctx.beginPath();ctx.ellipse(x,base+12,28,6,0,0,Math.PI*2);ctx.fill();
+ctx.globalAlpha=1;
+}
+function drawObjects(){
+for(const o of objects){
+const t=o.z,x=laneX(o.lane,t),y=roadEdges(t).y;
+const size=7+t*35;
+ctx.save();ctx.translate(x,y);
+if(o.type==="gem"){
+ctx.shadowBlur=18;ctx.shadowColor="#ffe35b";
+ctx.fillStyle="#ffe35b";ctx.beginPath();
+ctx.moveTo(0,-size);ctx.lineTo(size*.7,0);ctx.lineTo(0,size);ctx.lineTo(-size*.7,0);ctx.closePath();ctx.fill();
+ctx.fillStyle="white";ctx.fillRect(-2,-size*.4,4,size*.4);
+}else if(o.type==="block"){
+ctx.shadowBlur=16;ctx.shadowColor="#ff355f";
+polygon([[-size,y*0],[size,-size*.2],[size,size],[ -size,size*1.1]],"#ff315b","#ffb1c5");
+ctx.fillStyle="#5c143e";ctx.fillRect(-size*.6,-size*.05,size*1.2,size*.2);
+}else{
+ctx.shadowBlur=20;ctx.shadowColor="#9d6cff";
+ctx.strokeStyle="#bd85ff";ctx.lineWidth=4+t*5;
+ctx.strokeRect(-size*.8,-size*1.2,size*1.6,size*1.4);
+ctx.fillStyle="#e9d7ff";ctx.fillRect(-size*.5,-size*.8,size,size*.15);
+}
+ctx.restore();
+}
+ctx.shadowBlur=0;
+}
+function spawn(){
+const r=Math.random();
+objects.push({lane:Math.floor(Math.random()*3),z:0,type:r<.48?"block":r<.83?"gem":"gate",hit:false});
+}
+function damage(){
+if(invincible>0)return;
+if(shields>0){shields--;invincible=1.4}
+else{health--;invincible=1.4}
+updateStats();
+if(health<=0)finish(false);
+}
+function finish(won){
+running=false;ended=true;
+if(score>best){best=score;localStorage.setItem("neonRunnerBest",best)}
+$("overlay").style.display="flex";
+$("overlay").innerHTML=`
+<h2>${won?"🏆 YOU WIN!":"💥 GAME OVER"}</h2>
+<p>${won?"You conquered all five neon levels!":"Your run has ended. Try again and beat your best score."}</p>
+<p>⭐ Score: <b>${score}</b><br>💎 Crystals: <b>${gems}</b><br>🏅 Best score: <b>${best}</b></p>
+<button id="again">↻ PLAY AGAIN</button>`;
+$("again").addEventListener("click",reset);
+}
+function loop(now){
+if(!running)return;
+requestAnimationFrame(loop);
+if(paused){
+drawBackground();drawObjects();drawPlayer();
+ctx.fillStyle="white";ctx.font="bold 36px Arial";ctx.textAlign="center";ctx.fillText("PAUSED",W/2,H/2);
+return;
+}
+const dt=Math.min((now-lastTime)/1000,.04);lastTime=now;
+distance+=dt*speed*10;
+speed=.32+(level-1)*.09;
+if(invincible>0)invincible-=dt;
+if(jumpY>0||jumpV>0){
+jumpY+=jumpV*dt;jumpV-=1450*dt;
+if(jumpY<=0){jumpY=0;jumpV=0}
+}
+playerX+=(lane-playerX)*Math.min(1,dt*12);
+spawnTimer-=dt;
+if(spawnTimer<=0){spawn();spawnTimer=Math.max(.38,1.15-level*.13)+Math.random()*.45}
+for(const o of objects){
+o.z+=dt*speed*(1+level*.15);
+if(!o.hit&&o.z>.82&&o.z<.98&&Math.abs(playerX-o.lane)<.42){
+o.hit=true;
+if(o.type==="gem"){gems++;score+=100}
+else if(o.type==="block"){if(jumpY<48)damage();else score+=15}
+else{score+=50}
+updateStats();
+}
+}
+objects=objects.filter(o=>o.z<1.08);
+score+=Math.floor(dt*10);
+const newLevel=Math.min(5,Math.floor(distance/30)+1);
+if(newLevel!==level){level=newLevel;updateStats()}
+drawBackground();drawObjects();drawPlayer();
+ctx.fillStyle="#b7eaff";ctx.font="14px Arial";ctx.textAlign="left";
+ctx.fillText("DISTANCE "+Math.floor(distance)+" m",18,28);
+ctx.textAlign="right";ctx.fillText("BEST "+best,W-18,28);
+if(distance>=150){finish(true)}
+}
+drawBackground();
+drawPlayer();
+})();
+</script>
+</body>
+</html>
